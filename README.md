@@ -11,7 +11,6 @@ This project is inspired by Andrej Karpathy's [`llm-council`](https://github.com
 ## What It Does
 
 - runs multiple expert agents in parallel
-- performs Karpathy-style peer review on anonymized answers
 - uses a separately selected synthesis model for the final answer
 - streams run progress live in the UI
 - stores runs and configs locally in SQLite
