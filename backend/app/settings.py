@@ -4,6 +4,9 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
+
+from .google_gemini import normalize_google_gemini_backend
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +50,9 @@ class AppSettings:
     env_file: Path
     default_council_models: tuple[str, ...]
     default_synthesis_model: str
+    google_gemini_backend: Literal["gemini_api", "vertex_ai"]
+    vertexai_project: str
+    vertexai_location: str
 
 
 @lru_cache(maxsize=1)
@@ -54,9 +60,15 @@ def get_settings() -> AppSettings:
     env_file = load_env_file()
     default_models = _default_models_from_env()
     default_synthesis = os.getenv("DEFAULT_SYNTHESIS_MODEL") or BUILTIN_DEFAULT_SYNTHESIS_MODEL
+    google_gemini_backend = normalize_google_gemini_backend(
+        os.getenv("GOOGLE_GEMINI_BACKEND")
+    )
     return AppSettings(
         project_root=PROJECT_ROOT,
         env_file=env_file,
         default_council_models=default_models,
         default_synthesis_model=default_synthesis,
+        google_gemini_backend=google_gemini_backend,  # type: ignore[arg-type]
+        vertexai_project=os.getenv("VERTEXAI_PROJECT", "").strip(),
+        vertexai_location=os.getenv("VERTEXAI_LOCATION", "").strip(),
     )

@@ -56,11 +56,21 @@ cd ..
 cp .env.example .env
 ```
 
-5. Add your model provider keys and default model IDs to `.env`.
+5. Configure your model access and default model IDs in `.env`.
 
-Examples:
+For Gemini, choose one mode:
 
-- `GEMINI_API_KEY`
+- `GOOGLE_GEMINI_BACKEND=gemini_api`
+  Then set `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+- `GOOGLE_GEMINI_BACKEND=vertex_ai`
+  Then set `VERTEXAI_PROJECT`, `VERTEXAI_LOCATION`, and authenticate locally with:
+
+```bash
+gcloud auth application-default login
+```
+
+Other common variables:
+
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `DEFAULT_COUNCIL_MODELS`
@@ -83,8 +93,11 @@ The root `.env` file controls model access and default model selection.
 
 Main variables:
 
+- `GOOGLE_GEMINI_BACKEND`
 - `GEMINI_API_KEY`
 - `GOOGLE_API_KEY`
+- `VERTEXAI_PROJECT`
+- `VERTEXAI_LOCATION`
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `OLLAMA_API_BASE`
@@ -110,6 +123,7 @@ start_app.sh  starts backend and frontend together
 
 - runs and configs are stored locally
 - the default database file is `backend/data/council.sqlite3`
+- when `GOOGLE_GEMINI_BACKEND=vertex_ai`, all Gemini models are routed through Vertex AI and use ADC instead of a Gemini API key
 
 ## License
 

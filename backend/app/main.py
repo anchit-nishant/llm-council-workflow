@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from .config import build_default_council_config
 from .events import EventBroker
+from .google_gemini import validate_google_gemini_config
 from .runtime import CouncilRuntime
 from .schemas import (
     CancelRunResponse,
@@ -32,13 +33,15 @@ async def lifespan(app: FastAPI):
     storage = SQLiteStorage(DATABASE_PATH)
     storage.initialize()
     default_config = build_default_council_config(settings)
+    validate_google_gemini_config(settings, default_config)
     storage.upsert_config(default_config)
     broker = EventBroker()
-    runtime = CouncilRuntime(storage=storage, broker=broker)
+    runtime = CouncilRuntime(storage=storage, broker=broker, settings=settings)
     app.state.storage = storage
     app.state.broker = broker
     app.state.runtime = runtime
     app.state.default_config_id = default_config.id
+    app.state.settings = settings
     yield
 
 
@@ -127,6 +130,10 @@ async def create_run(request: CreateRunRequest) -> RunSnapshot:
             )
     if not config:
         raise HTTPException(status_code=404, detail="Config not found.")
+    try:
+        validate_google_gemini_config(app.state.settings, config)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return await get_runtime(app).start_run(request.query, config)
 
 

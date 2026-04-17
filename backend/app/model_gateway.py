@@ -8,7 +8,9 @@ from typing import Any, Awaitable, Callable, Sequence
 
 from litellm import completion
 
+from .google_gemini import resolve_google_gemini_model
 from .schemas import AnonymizedResponse, ExpertOutput, ExpertSpec, ReviewOutput
+from .settings import AppSettings
 
 
 TokenCallback = Callable[[str], Awaitable[None]]
@@ -22,6 +24,9 @@ class CompletionSettings:
 
 
 class LiteLLMModelGateway:
+    def __init__(self, settings: AppSettings) -> None:
+        self.settings = settings
+
     async def generate_expert_output(
         self,
         *,
@@ -29,6 +34,7 @@ class LiteLLMModelGateway:
         query: str,
         on_token: TokenCallback,
     ) -> ExpertOutput:
+        resolved_model = self._resolve_model_id(expert.model)
         settings = CompletionSettings(
             temperature=expert.temperature,
             max_tokens=expert.max_tokens,
@@ -36,7 +42,7 @@ class LiteLLMModelGateway:
         )
         prompt = self._expert_prompt(expert, query)
         text = await self._stream_text(
-            model_id=expert.model,
+            model_id=resolved_model,
             messages=[
                 {"role": "system", "content": expert.system_prompt},
                 {"role": "user", "content": prompt},
@@ -48,7 +54,7 @@ class LiteLLMModelGateway:
         return ExpertOutput(
             expert_id=expert.id,
             expert_label=expert.label,
-            model=expert.model,
+            model=resolved_model,
             persona=expert.persona,
             answer=parsed["answer"],
             claims=parsed["claims"],
@@ -66,6 +72,7 @@ class LiteLLMModelGateway:
         review_prompt_template: str,
         on_token: TokenCallback,
     ) -> ReviewOutput:
+        resolved_model = self._resolve_model_id(expert.model)
         settings = CompletionSettings(
             temperature=expert.temperature,
             max_tokens=expert.max_tokens,
@@ -78,7 +85,7 @@ class LiteLLMModelGateway:
             review_prompt_template=review_prompt_template,
         )
         text = await self._stream_text(
-            model_id=expert.model,
+            model_id=resolved_model,
             messages=[
                 {"role": "system", "content": expert.system_prompt},
                 {"role": "user", "content": prompt},
@@ -90,7 +97,7 @@ class LiteLLMModelGateway:
         return ReviewOutput(
             reviewer_id=expert.id,
             reviewer_label=expert.label,
-            model=expert.model,
+            model=resolved_model,
             persona=expert.persona,
             ranking_labels=parsed["ranking_labels"],
             ranking_expert_ids=[
@@ -130,6 +137,7 @@ class LiteLLMModelGateway:
         settings: CompletionSettings,
         on_token: TokenCallback,
     ) -> str:
+        resolved_model = self._resolve_model_id(model_id)
         prompt = self._synthesis_prompt(
             query=query,
             expert_outputs=expert_outputs,
@@ -139,7 +147,7 @@ class LiteLLMModelGateway:
             synthesis_prompt_template=synthesis_prompt_template,
         )
         return await self._stream_text(
-            model_id=model_id,
+            model_id=resolved_model,
             messages=[
                 {
                     "role": "system",
@@ -149,6 +157,11 @@ class LiteLLMModelGateway:
             ],
             settings=settings,
             on_token=on_token,
+        )
+
+    def _resolve_model_id(self, model_id: str) -> str:
+        return resolve_google_gemini_model(
+            model_id, self.settings.google_gemini_backend
         )
 
     async def _stream_text(

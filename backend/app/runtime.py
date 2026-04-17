@@ -12,6 +12,7 @@ from langgraph.types import Send
 from typing_extensions import TypedDict
 
 from .events import EventBroker
+from .google_gemini import resolve_google_gemini_model
 from .model_gateway import CompletionSettings, LiteLLMModelGateway
 from .schemas import (
     AggregateReview,
@@ -26,6 +27,7 @@ from .schemas import (
     StageSnapshot,
     utcnow,
 )
+from .settings import AppSettings
 from .storage import SQLiteStorage
 
 
@@ -295,10 +297,13 @@ class RunTracker:
 
 
 class CouncilRuntime:
-    def __init__(self, storage: SQLiteStorage, broker: EventBroker) -> None:
+    def __init__(
+        self, storage: SQLiteStorage, broker: EventBroker, settings: AppSettings
+    ) -> None:
         self.storage = storage
         self.broker = broker
-        self.models = LiteLLMModelGateway()
+        self.settings = settings
+        self.models = LiteLLMModelGateway(settings)
         self.trackers: dict[str, RunTracker] = {}
         self.cancel_events: dict[str, asyncio.Event] = {}
         self.tasks: dict[str, asyncio.Task[None]] = {}
@@ -398,12 +403,15 @@ class CouncilRuntime:
         }
         node_snapshots: dict[str, NodeSnapshot] = {}
         for index, expert in enumerate(enabled_experts):
+            resolved_model = resolve_google_gemini_model(
+                expert.model, self.settings.google_gemini_backend
+            )
             node_snapshots[f"expert:{expert.id}"] = NodeSnapshot(
                 node_id=f"expert:{expert.id}",
                 stage="experts",
                 node_type="expert",
                 label=expert.label,
-                model=expert.model,
+                model=resolved_model,
                 persona=expert.persona,
                 display_order=index,
             )
@@ -412,16 +420,19 @@ class CouncilRuntime:
                 stage="peer_review",
                 node_type="review",
                 label=f"{expert.label} Review",
-                model=expert.model,
+                model=resolved_model,
                 persona=expert.persona,
                 display_order=index,
             )
+        resolved_synthesis_model = resolve_google_gemini_model(
+            config.synthesis_model, self.settings.google_gemini_backend
+        )
         node_snapshots["synthesis:final"] = NodeSnapshot(
             node_id="synthesis:final",
             stage="synthesis",
             node_type="synthesis",
             label="Final Synthesis",
-            model=config.synthesis_model,
+            model=resolved_synthesis_model,
             persona="Final council synthesizer",
             display_order=0,
         )
