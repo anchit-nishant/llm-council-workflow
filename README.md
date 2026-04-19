@@ -2,7 +2,7 @@
 
 A local multi-agent council app built with `LangGraph`, `FastAPI`, and `Next.js`.
 
-Ask one question, run multiple expert models in parallel, review the responses, and generate one final synthesis. The UI shows the run live so you can inspect each stage.
+Ask one question, run multiple expert models in parallel, review the responses, and generate one final synthesis. You can also create and save your own council workflows from the app.
 
 ![llm-council-workflow screenshot](./docs/llm-council-workflow.png)
 
@@ -11,10 +11,11 @@ This project is inspired by Andrej Karpathy's [`llm-council`](https://github.com
 ## What It Does
 
 - runs multiple expert agents in parallel
+- reviews expert responses before producing one final synthesis
 - uses a separately selected synthesis model for the final answer
+- lets you create, save, edit, and delete your own council workflows
 - streams run progress live in the UI
 - stores runs and configs locally in SQLite
-- lets you create and save council configs from the app
 
 ## Stack
 
@@ -86,6 +87,8 @@ Open:
 
 - UI: `http://127.0.0.1:3000`
 - API: `http://127.0.0.1:8000`
+
+Use the Builder in the UI to create your own council by choosing experts, prompts, and a synthesis model.
 
 ## Environment
 
